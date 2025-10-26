@@ -47,11 +47,13 @@ $this->title = 'Supermarket POS';
   </audio>
 </div>
 
+
+
 <?php
 $addUrl = \yii\helpers\Url::to(['pos/add']);
 $checkoutUrl = \yii\helpers\Url::to(['pos/checkout']);
 $cartUrl = \yii\helpers\Url::to(['pos/cart']);
-$js = <<<'JS'
+$js = <<<JS
 const barcodeInput = document.getElementById('barcodeInput');
 const cartTableBody = document.querySelector('#cartTable tbody');
 const subtotalEl = document.getElementById('subtotal');
@@ -67,12 +69,16 @@ function renderCart(cart) {
     cart.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${item.name}</td>
-            <td>${item.qty}</td>
-            <td>$${item.unit_price.toFixed(2)}</td>
-            <td>$${item.total.toFixed(2)}</td>
+            <td>\${item.name}</td>
+            <td>\${item.qty}</td>
+            <td>$\${item.unit_price.toFixed(2)}</td>
+            <td>$\${item.total.toFixed(2)}</td>
         `;
         cartTableBody.appendChild(tr);
+
+         // Flash new item highlight
+        tr.classList.add('table-info');
+        setTimeout(() => tr.classList.remove('table-info'), 300);
 
         subtotal += item.total;
         tax += (item.tax_rate / 100) * item.total;
@@ -81,6 +87,8 @@ function renderCart(cart) {
     subtotalEl.textContent = subtotal.toFixed(2);
     taxEl.textContent = tax.toFixed(2);
     totalEl.textContent = (subtotal + tax).toFixed(2);
+    // Play scan sound
+    document.getElementById('scanBeep').play();
 }
 
 barcodeInput.addEventListener('keypress', function(e) {

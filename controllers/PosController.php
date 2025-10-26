@@ -142,6 +142,34 @@ class PosController extends Controller
         return ['success' => true];
     }
 
+
+    public function actionScan($barcode = null)
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        if (!$barcode) {
+            return ['success' => false, 'message' => 'No barcode provided'];
+        }
+
+        // Assuming you have a Product model
+        $product = \app\models\Product::find()->where(['sku' => $barcode])->one();
+
+        if (!$product) {
+            return ['success' => false, 'message' => 'Product not found'];
+        }
+
+        $item = [
+            'id' => $product->id,
+            'name' => $product->name,
+            'qty' => 1,
+            'unit_price' => (float)$product->price,
+            'total' => (float)$product->price,
+            'tax_rate' => (float)$product->tax_rate,
+        ];
+
+        return ['success' => true, 'item' => $item];
+    }  
+
     // 8. Checkout (POST: payment_method)
     public function actionCheckout()
     {
