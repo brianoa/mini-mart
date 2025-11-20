@@ -25,6 +25,10 @@ use yii\widgets\ActiveForm;
 
     <?= $form->field($model, 'unit_price') ?>
 
+    <?php // echo $form->field($model, 'customer_name') ?>
+
+    <?php // echo $form->field($model, 'customer_phone') ?>
+
     <?php // echo $form->field($model, 'total_price') ?>
 
     <div class="form-group">

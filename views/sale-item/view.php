@@ -34,6 +34,8 @@ $this->params['breadcrumbs'][] = $this->title;
             'product_id',
             'qty',
             'unit_price',
+            'customer_name',
+            'customer_phone',
             'total_price',
         ],
     ]) ?>

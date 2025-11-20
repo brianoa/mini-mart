@@ -58,6 +58,23 @@ class SaleItem extends \yii\db\ActiveRecord
             'total_price' => 'Total Price',
         ];
     }
+    
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        // Reduce product stock when a new sale item is created
+        if ($insert) {
+            $product = $this->product;
+            if ($product) {
+                $product->quantity -= $this->qty;
+                if ($product->quantity < 0) {
+                    $product->quantity = 0;
+                }
+                $product->save(false);
+            }
+        }
+    }
 
     /**
      * Gets query for [[Product]].

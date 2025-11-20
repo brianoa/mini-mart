@@ -22,6 +22,14 @@ use yii\widgets\ActiveForm;
 
     <?= $form->field($model, 'stock')->textInput() ?>
 
+    <?= $form->field($model, 'buying_price')->textInput(['maxlength' => true]) ?>
+
+    <?= $form->field($model, 'selling_price')->textInput(['maxlength' => true]) ?>
+
+    <?= $form->field($model, 'quantity')->textInput() ?>
+
+    <?= $form->field($model, 'created_at')->textInput() ?>
+
     <div class="form-group">
         <?= Html::submitButton('Save', ['class' => 'btn btn-success']) ?>
     </div>

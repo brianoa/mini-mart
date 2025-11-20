@@ -17,9 +17,9 @@ class ProductSearch extends Product
     public function rules()
     {
         return [
-            [['id', 'stock'], 'integer'],
+            [['id', 'stock', 'quantity'], 'integer'],
             [['sku', 'name', 'created_at'], 'safe'],
-            [['price', 'tax_rate'], 'number'],
+            [['price', 'tax_rate', 'buying_price', 'selling_price'], 'number'],
         ];
     }
 
@@ -64,6 +64,9 @@ class ProductSearch extends Product
             'price' => $this->price,
             'tax_rate' => $this->tax_rate,
             'stock' => $this->stock,
+            'buying_price' => $this->buying_price,
+            'selling_price' => $this->selling_price,
+            'quantity' => $this->quantity,
             'created_at' => $this->created_at,
         ]);
 

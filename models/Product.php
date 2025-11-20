@@ -13,7 +13,10 @@ use Yii;
  * @property float $price
  * @property float|null $tax_rate
  * @property int|null $stock
- * @property string|null $created_at
+ * @property float $buying_price
+ * @property float $selling_price
+ * @property int $quantity
+ * @property string $created_at
  *
  * @property SaleItem[] $saleItems
  */
@@ -35,11 +38,11 @@ class Product extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['tax_rate'], 'default', 'value' => 0.00],
-            [['stock'], 'default', 'value' => 0],
-            [['sku', 'name'], 'required'],
-            [['price', 'tax_rate'], 'number'],
-            [['stock'], 'integer'],
+            [['selling_price'], 'default', 'value' => 0.00],
+            [['quantity'], 'default', 'value' => 0],
+            [['sku', 'name', 'created_at'], 'required'],
+            [['price', 'tax_rate', 'buying_price', 'selling_price'], 'number'],
+            [['stock', 'quantity'], 'integer'],
             [['created_at'], 'safe'],
             [['sku'], 'string', 'max' => 64],
             [['name'], 'string', 'max' => 255],
@@ -59,6 +62,9 @@ class Product extends \yii\db\ActiveRecord
             'price' => 'Price',
             'tax_rate' => 'Tax Rate',
             'stock' => 'Stock',
+            'buying_price' => 'Buying Price',
+            'selling_price' => 'Selling Price',
+            'quantity' => 'Quantity',
             'created_at' => 'Created At',
         ];
     }
@@ -71,13 +77,6 @@ class Product extends \yii\db\ActiveRecord
     public function getSaleItems()
     {
         return $this->hasMany(SaleItem::class, ['product_id' => 'id']);
-    }
-     public function beforeSave($insert)
-    {
-        if ($insert) {
-            $this->created_at = date('Y-m-d H:i:s'); // current timestamp
-        }
-        return parent::beforeSave($insert);
     }
 
 }

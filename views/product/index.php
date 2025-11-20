@@ -35,6 +35,9 @@ $this->params['breadcrumbs'][] = $this->title;
             'price',
             'tax_rate',
             //'stock',
+            'buying_price',
+            'selling_price',
+            'quantity',
             //'created_at',
             [
                 'class' => ActionColumn::className(),

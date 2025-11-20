@@ -27,6 +27,12 @@ use yii\widgets\ActiveForm;
 
     <?php // echo $form->field($model, 'stock') ?>
 
+    <?php // echo $form->field($model, 'buying_price') ?>
+
+    <?php // echo $form->field($model, 'selling_price') ?>
+
+    <?php // echo $form->field($model, 'quantity') ?>
+
     <?php // echo $form->field($model, 'created_at') ?>
 
     <div class="form-group">

@@ -19,6 +19,7 @@ class SaleItemSearch extends SaleItem
         return [
             [['id', 'sale_id', 'product_id', 'qty'], 'integer'],
             [['unit_price', 'total_price'], 'number'],
+            [['customer_name', 'customer_phone'], 'safe'],
         ];
     }
 
@@ -66,6 +67,9 @@ class SaleItemSearch extends SaleItem
             'unit_price' => $this->unit_price,
             'total_price' => $this->total_price,
         ]);
+
+        $query->andFilterWhere(['like', 'customer_name', $this->customer_name])
+            ->andFilterWhere(['like', 'customer_phone', $this->customer_phone]);
 
         return $dataProvider;
     }
