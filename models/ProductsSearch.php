@@ -4,12 +4,12 @@ namespace app\models;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Sale;
+use app\models\Products;
 
 /**
- * SaleSearch represents the model behind the search form of `app\models\Sale`.
+ * ProductsSearch represents the model behind the search form of `app\models\Products`.
  */
-class SaleSearch extends Sale
+class ProductsSearch extends Products
 {
     /**
      * {@inheritdoc}
@@ -17,9 +17,9 @@ class SaleSearch extends Sale
     public function rules()
     {
         return [
-            [['id'], 'integer'],
-            [['cashier', 'payment_method', 'created_at'], 'safe'],
-            [['subtotal', 'tax', 'total'], 'number'],
+            [['id', 'initial_qty_instock', 'sold_qty_instock', 'balance_qty_instock'], 'integer'],
+            [['sku', 'name', 'created_at', 'updated_at'], 'safe'],
+            [['selling_price','buying_price', 'tax_rate'], 'number'],
         ];
     }
 
@@ -42,7 +42,7 @@ class SaleSearch extends Sale
      */
     public function search($params, $formName = null)
     {
-        $query = Sale::find();
+        $query = Products::find();
 
         // add conditions that should always apply here
 
@@ -61,14 +61,18 @@ class SaleSearch extends Sale
         // grid filtering conditions
         $query->andFilterWhere([
             'id' => $this->id,
-            'subtotal' => $this->subtotal,
-            'tax' => $this->tax,
-            'total' => $this->total,
+            'buying_price' => $this->buying_price,
+            'selling_price' => $this->selling_price,
+            'tax_rate' => $this->tax_rate,
+            'initial_qty_instock' => $this->initial_qty_instock,
+            'sold_qty_instock' => $this->sold_qty_instock,
+            'balance_qty_instock' => $this->balance_qty_instock,
             'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ]);
 
-        $query->andFilterWhere(['like', 'cashier', $this->cashier])
-            ->andFilterWhere(['like', 'payment_method', $this->payment_method]);
+        $query->andFilterWhere(['like', 'sku', $this->sku])
+            ->andFilterWhere(['like', 'name', $this->name]);
 
         return $dataProvider;
     }

@@ -2,16 +2,16 @@
 
 namespace app\controllers;
 
-use app\models\Sale;
-use app\models\SaleSearch;
+use app\models\Products;
+use app\models\ProductsSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
 /**
- * SaleController implements the CRUD actions for Sale model.
+ * ProductsController implements the CRUD actions for Products model.
  */
-class SaleController extends Controller
+class ProductsController extends Controller
 {
     /**
      * @inheritDoc
@@ -32,13 +32,13 @@ class SaleController extends Controller
     }
 
     /**
-     * Lists all Sale models.
+     * Lists all Products models.
      *
      * @return string
      */
     public function actionIndex()
     {
-        $searchModel = new SaleSearch();
+        $searchModel = new ProductsSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
 
         return $this->render('index', [
@@ -48,7 +48,7 @@ class SaleController extends Controller
     }
 
     /**
-     * Displays a single Sale model.
+     * Displays a single Products model.
      * @param int $id ID
      * @return string
      * @throws NotFoundHttpException if the model cannot be found
@@ -61,13 +61,13 @@ class SaleController extends Controller
     }
 
     /**
-     * Creates a new Sale model.
+     * Creates a new Products model.
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
     public function actionCreate()
     {
-        $model = new Sale();
+        $model = new Products();
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post()) && $model->save()) {
@@ -83,7 +83,7 @@ class SaleController extends Controller
     }
 
     /**
-     * Updates an existing Sale model.
+     * Updates an existing Products model.
      * If update is successful, the browser will be redirected to the 'view' page.
      * @param int $id ID
      * @return string|\yii\web\Response
@@ -103,7 +103,7 @@ class SaleController extends Controller
     }
 
     /**
-     * Deletes an existing Sale model.
+     * Deletes an existing Products model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
      * @param int $id ID
      * @return \yii\web\Response
@@ -117,15 +117,15 @@ class SaleController extends Controller
     }
 
     /**
-     * Finds the Sale model based on its primary key value.
+     * Finds the Products model based on its primary key value.
      * If the model is not found, a 404 HTTP exception will be thrown.
      * @param int $id ID
-     * @return Sale the loaded model
+     * @return Products the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
     protected function findModel($id)
     {
-        if (($model = Sale::findOne(['id' => $id])) !== null) {
+        if (($model = Products::findOne(['id' => $id])) !== null) {
             return $model;
         }
 

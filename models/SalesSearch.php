@@ -4,12 +4,12 @@ namespace app\models;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\SaleItem;
+use app\models\Sales;
 
 /**
- * SaleItemSearch represents the model behind the search form of `app\models\SaleItem`.
+ * SalesSearch represents the model behind the search form of `app\models\Sales`.
  */
-class SaleItemSearch extends SaleItem
+class SalesSearch extends Sales
 {
     /**
      * {@inheritdoc}
@@ -17,9 +17,9 @@ class SaleItemSearch extends SaleItem
     public function rules()
     {
         return [
-            [['id', 'sale_id', 'product_id', 'qty'], 'integer'],
-            [['unit_price', 'total_price'], 'number'],
-            [['customer_name', 'customer_phone'], 'safe'],
+            [['id'], 'integer'],
+            [['client_name', 'status', 'payment_method', 'created_at'], 'safe'],
+            [['total_amount'], 'number'],
         ];
     }
 
@@ -42,7 +42,7 @@ class SaleItemSearch extends SaleItem
      */
     public function search($params, $formName = null)
     {
-        $query = SaleItem::find();
+        $query = Sales::find();
 
         // add conditions that should always apply here
 
@@ -61,15 +61,13 @@ class SaleItemSearch extends SaleItem
         // grid filtering conditions
         $query->andFilterWhere([
             'id' => $this->id,
-            'sale_id' => $this->sale_id,
-            'product_id' => $this->product_id,
-            'qty' => $this->qty,
-            'unit_price' => $this->unit_price,
-            'total_price' => $this->total_price,
+            'total_amount' => $this->total_amount,
+            'created_at' => $this->created_at,
         ]);
 
-        $query->andFilterWhere(['like', 'customer_name', $this->customer_name])
-            ->andFilterWhere(['like', 'customer_phone', $this->customer_phone]);
+        $query->andFilterWhere(['like', 'client_name', $this->client_name])
+            ->andFilterWhere(['like', 'status', $this->status])
+            ->andFilterWhere(['like', 'payment_method', $this->payment_method]);
 
         return $dataProvider;
     }

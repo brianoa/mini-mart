@@ -4,12 +4,12 @@ namespace app\models;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Product;
+use app\models\SaleItems;
 
 /**
- * ProductSearch represents the model behind the search form of `app\models\Product`.
+ * SaleItemsSearch represents the model behind the search form of `app\models\SaleItems`.
  */
-class ProductSearch extends Product
+class SaleItemsSearch extends SaleItems
 {
     /**
      * {@inheritdoc}
@@ -17,9 +17,8 @@ class ProductSearch extends Product
     public function rules()
     {
         return [
-            [['id', 'stock', 'quantity'], 'integer'],
-            [['sku', 'name', 'created_at'], 'safe'],
-            [['price', 'tax_rate', 'buying_price', 'selling_price'], 'number'],
+            [['id', 'sale_id', 'product_id', 'quantity'], 'integer'],
+            [['unit_price', 'subtotal'], 'number'],
         ];
     }
 
@@ -42,7 +41,7 @@ class ProductSearch extends Product
      */
     public function search($params, $formName = null)
     {
-        $query = Product::find();
+        $query = SaleItems::find();
 
         // add conditions that should always apply here
 
@@ -61,17 +60,12 @@ class ProductSearch extends Product
         // grid filtering conditions
         $query->andFilterWhere([
             'id' => $this->id,
-            'price' => $this->price,
-            'tax_rate' => $this->tax_rate,
-            'stock' => $this->stock,
-            'buying_price' => $this->buying_price,
-            'selling_price' => $this->selling_price,
+            'sale_id' => $this->sale_id,
+            'product_id' => $this->product_id,
             'quantity' => $this->quantity,
-            'created_at' => $this->created_at,
+            'unit_price' => $this->unit_price,
+            'subtotal' => $this->subtotal,
         ]);
-
-        $query->andFilterWhere(['like', 'sku', $this->sku])
-            ->andFilterWhere(['like', 'name', $this->name]);
 
         return $dataProvider;
     }

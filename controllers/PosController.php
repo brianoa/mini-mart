@@ -4,14 +4,15 @@ namespace app\controllers;
 use Yii;
 use yii\web\Controller;
 use yii\web\Response;
-use app\models\Product;
-use app\models\Sale;
-use app\models\SaleItem;
 use yii\filters\VerbFilter;
+use app\models\Products;
+use app\models\Sales;
+use app\models\SaleItems;
 
 class PosController extends Controller
 {
-    public $enableCsrfValidation=false;
+    public $enableCsrfValidation = false;
+
     public function behaviors()
     {
         return [
@@ -28,50 +29,57 @@ class PosController extends Controller
         ];
     }
 
-    // 1. POS page (view will be built in next segment)
+    /** POS page */
     public function actionIndex()
     {
         $cart = Yii::$app->session->get('cart', []);
         return $this->render('index', ['cart' => $cart]);
     }
 
-    // 2. Lookup by SKU (GET)
+    /** Lookup product by SKU */
     public function actionLookup($sku = null)
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        if (!$sku) return ['success' => false, 'message' => 'No SKU provided'];
 
-        $product = Product::find()->where(['sku' => $sku])->one();
+        if (!$sku) {
+            return ['success' => false, 'message' => 'No SKU provided'];
+        }
+
+        $product = Products::find()->where(['sku' => $sku])->one();
+
         if (!$product) {
             return ['success' => false, 'message' => 'Product not found'];
         }
+
         return [
             'success' => true,
             'product' => [
                 'id' => $product->id,
                 'sku' => $product->sku,
                 'name' => $product->name,
-                'price' => (float)$product->price,
+                'price' => (float)$product->selling_price,
                 'tax_rate' => (float)$product->tax_rate,
-                'stock' => (int)$product->stock,
-            ]
+                'stock' => (int)$product->balance_qty_instock,
+            ],
         ];
     }
 
-    // 3. Add item to cart (POST: sku)
+    /** Add item to cart */
     public function actionAdd()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
+
         $sku = Yii::$app->request->post('sku');
         if (!$sku) return ['success' => false, 'message' => 'No SKU provided'];
 
-        $product = Product::find()->where(['sku' => $sku])->one();
+        $product = Products::find()->where(['sku' => $sku])->one();
         if (!$product) return ['success' => false, 'message' => 'Product not found'];
 
         $session = Yii::$app->session;
         $cart = $session->get('cart', []);
 
         $pid = $product->id;
+
         if (isset($cart[$pid])) {
             $cart[$pid]['qty'] += 1;
             $cart[$pid]['total'] = round($cart[$pid]['qty'] * $cart[$pid]['unit_price'], 2);
@@ -80,35 +88,41 @@ class PosController extends Controller
                 'product_id' => $pid,
                 'sku' => $product->sku,
                 'name' => $product->name,
-                'unit_price' => (float)$product->price,
+                'unit_price' => (float)$product->selling_price,
                 'qty' => 1,
-                'total' => (float)$product->price,
+                'total' => (float)$product->selling_price,
                 'tax_rate' => (float)$product->tax_rate,
             ];
         }
 
         $session->set('cart', $cart);
+
         return ['success' => true, 'cart' => array_values($cart)];
     }
 
-    // 4. Get cart (GET)
+    /** Get cart */
     public function actionCart()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        $cart = Yii::$app->session->get('cart', []);
-        return ['success' => true, 'cart' => array_values($cart)];
+        return [
+            'success' => true,
+            'cart' => array_values(Yii::$app->session->get('cart', [])),
+        ];
     }
 
-    // 5. Update qty (POST: product_id, qty)
+    /** Update item quantity */
     public function actionUpdate()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
+
         $pid = (int)Yii::$app->request->post('product_id');
         $qty = (int)Yii::$app->request->post('qty');
+
         if (!$pid) return ['success' => false, 'message' => 'product_id required'];
 
         $session = Yii::$app->session;
         $cart = $session->get('cart', []);
+
         if (!isset($cart[$pid])) return ['success' => false, 'message' => 'Item not in cart'];
 
         if ($qty <= 0) {
@@ -117,24 +131,31 @@ class PosController extends Controller
             $cart[$pid]['qty'] = $qty;
             $cart[$pid]['total'] = round($qty * $cart[$pid]['unit_price'], 2);
         }
+
         $session->set('cart', $cart);
+
         return ['success' => true, 'cart' => array_values($cart)];
     }
 
-    // 6. Remove (POST: product_id)
+    /** Remove item */
     public function actionRemove()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
+
         $pid = (int)Yii::$app->request->post('product_id');
         if (!$pid) return ['success' => false, 'message' => 'product_id required'];
+
         $session = Yii::$app->session;
         $cart = $session->get('cart', []);
+
         if (isset($cart[$pid])) unset($cart[$pid]);
+
         $session->set('cart', $cart);
+
         return ['success' => true, 'cart' => array_values($cart)];
     }
 
-    // 7. Clear cart
+    /** Clear cart */
     public function actionClear()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
@@ -142,75 +163,88 @@ class PosController extends Controller
         return ['success' => true];
     }
 
-
+    /** Barcode scan */
     public function actionScan($barcode = null)
     {
-        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        Yii::$app->response->format = Response::FORMAT_JSON;
 
         if (!$barcode) {
             return ['success' => false, 'message' => 'No barcode provided'];
         }
 
-        // Assuming you have a Product model
-        $product = \app\models\Product::find()->where(['sku' => $barcode])->one();
+        $product = Products::find()->where(['sku' => $barcode])->one();
+        if (!$product) return ['success' => false, 'message' => 'Product not found'];
 
-        if (!$product) {
-            return ['success' => false, 'message' => 'Product not found'];
-        }
-
-        $item = [
-            'id' => $product->id,
-            'name' => $product->name,
-            'qty' => 1,
-            'unit_price' => (float)$product->price,
-            'total' => (float)$product->price,
-            'tax_rate' => (float)$product->tax_rate,
+        return [
+            'success' => true,
+            'item' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'qty' => 1,
+                'unit_price' => (float)$product->selling_price,
+                'total' => (float)$product->selling_price,
+                'tax_rate' => (float)$product->tax_rate,
+            ],
         ];
+    }
 
-        return ['success' => true, 'item' => $item];
-    }  
-
-    // 8. Checkout (POST: payment_method)
+    /** Checkout */
     public function actionCheckout()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
+
         $session = Yii::$app->session;
         $cart = $session->get('cart', []);
+
         if (empty($cart)) return ['success' => false, 'message' => 'Cart is empty'];
 
-        // compute totals server-side
-        $subtotal = 0; $tax = 0;
-        foreach ($cart as $it) {
-            $subtotal += $it['total'];
-            $tax += ($it['total'] * ($it['tax_rate'] ?? 0) / 100.0);
-        }
-        $total = round($subtotal + $tax, 2);
+        // Calculate totals
+        $subtotal = 0;
+        $tax = 0;
 
-        $sale = new Sale();
-        $sale->cashier = Yii::$app->user->isGuest ? 'Guest' : Yii::$app->user->identity->username;
-        $sale->subtotal = $subtotal;
-        $sale->tax = $tax;
-        $sale->total = $total;
-        $sale->payment_method = Yii::$app->request->post('payment_method', 'Cash');
+        foreach ($cart as $item) {
+            $subtotal += $item['total'];
+            $tax += ($item['total'] * ($item['tax_rate'] ?? 0) / 100);
+        }
+
+        $total_amount = round($subtotal + $tax, 2);
+
+        // Save sale
+        $sale = new Sales();
+        $sale->client_name = Yii::$app->request->post('client_name', 'Walking Customer');
+        $sale->payment_method = Yii::$app->request->post('payment_method', Sales::PAYMENT_METHOD_CASH);
+        $sale->status = Sales::STATUS_PAID;
+        $sale->total_amount = $total_amount;
 
         if (!$sale->save()) {
-            return ['success' => false, 'message' => 'Failed saving sale', 'errors' => $sale->errors];
+            return ['success' => false, 'message' => 'Failed to save sale', 'errors' => $sale->errors];
         }
 
-        foreach ($cart as $it) {
-            $si = new SaleItem();
+        // Save sale items
+        foreach ($cart as $item) {
+            $si = new SaleItems();
             $si->sale_id = $sale->id;
-            $si->product_id = $it['product_id'];
-            $si->qty = $it['qty'];
-            $si->unit_price = $it['unit_price'];
-            $si->total_price = $it['total'];
+            $si->product_id = $item['product_id'];
+            $si->quantity = $item['qty'];
+            $si->unit_price = $item['unit_price'];
+            $si->subtotal = $item['total'];
             $si->save(false);
+
+            // Reduce product stock
+            $product = Products::findOne($item['product_id']);
+            if ($product) {
+                $product->sold_qty_instock += $item['qty'];
+                $product->balance_qty_instock -= $item['qty'];
+                $product->save(false);
+            }
         }
 
-        // clear session
         $session->remove('cart');
 
-        // return sale id & summary (UI will request receipt render if needed)
-        return ['success' => true, 'sale_id' => $sale->id, 'subtotal'=>$subtotal,'tax'=>$tax,'total'=>$total];
+        return [
+            'success' => true,
+            'sale_id' => $sale->id,
+            'total_amount' => $total_amount,
+        ];
     }
 }

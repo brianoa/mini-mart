@@ -1,24 +1,24 @@
 <?php
 
-use app\models\SaleItem;
+use app\models\Products;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
 
 /** @var yii\web\View $this */
-/** @var app\models\SaleItemSearch $searchModel */
+/** @var app\models\ProductsSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-$this->title = 'Sale Items';
+$this->title = 'Products';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
-<div class="sale-item-index">
+<div class="products-index">
 
     <h1><?= Html::encode($this->title) ?></h1>
 
     <p>
-        <?= Html::a('Create Sale Item', ['create'], ['class' => 'btn btn-success']) ?>
+        <?= Html::a('Create Products', ['create'], ['class' => 'btn btn-success']) ?>
     </p>
 
     <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
@@ -30,16 +30,19 @@ $this->params['breadcrumbs'][] = $this->title;
             ['class' => 'yii\grid\SerialColumn'],
 
             //'id',
-            //'sale_id',
-            //'product_id',
-            'customer_name',
-            'customer_phone',
-            'qty',
-            'unit_price',
-            'total_price',
+            'sku',
+            'name',
+            'buying_price',
+            'selling_price',
+            'tax_rate',
+            //'initial_qty_instock',
+            'sold_qty_instock',
+            'balance_qty_instock',
+            //'created_at',
+            //'updated_at',
             [
                 'class' => ActionColumn::className(),
-                'urlCreator' => function ($action, SaleItem $model, $key, $index, $column) {
+                'urlCreator' => function ($action, Products $model, $key, $index, $column) {
                     return Url::toRoute([$action, 'id' => $model->id]);
                  }
             ],

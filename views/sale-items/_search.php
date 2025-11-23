@@ -4,11 +4,11 @@ use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
-/** @var app\models\ProductSearch $model */
+/** @var app\models\SaleItemsSearch $model */
 /** @var yii\widgets\ActiveForm $form */
 ?>
 
-<div class="product-search">
+<div class="sale-items-search">
 
     <?php $form = ActiveForm::begin([
         'action' => ['index'],
@@ -17,23 +17,15 @@ use yii\widgets\ActiveForm;
 
     <?= $form->field($model, 'id') ?>
 
-    <?= $form->field($model, 'sku') ?>
+    <?= $form->field($model, 'sale_id') ?>
 
-    <?= $form->field($model, 'name') ?>
+    <?= $form->field($model, 'product_id') ?>
 
-    <?= $form->field($model, 'price') ?>
+    <?= $form->field($model, 'quantity') ?>
 
-    <?= $form->field($model, 'tax_rate') ?>
+    <?= $form->field($model, 'unit_price') ?>
 
-    <?php // echo $form->field($model, 'stock') ?>
-
-    <?php // echo $form->field($model, 'buying_price') ?>
-
-    <?php // echo $form->field($model, 'selling_price') ?>
-
-    <?php // echo $form->field($model, 'quantity') ?>
-
-    <?php // echo $form->field($model, 'created_at') ?>
+    <?php // echo $form->field($model, 'subtotal') ?>
 
     <div class="form-group">
         <?= Html::submitButton('Search', ['class' => 'btn btn-primary']) ?>

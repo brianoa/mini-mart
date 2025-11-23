@@ -3,61 +3,66 @@
 $this->title = 'Supermarket POS';
 ?>
 
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-md-6">
-            <h3 class="mb-3 text-primary">🛒 Supermarket POS</h3>
+<script src="/js/qz-tray.js"></script>
 
-            <!-- Barcode Input -->
-            <div class="card shadow-sm p-3 mb-3">
-                <label for="barcodeInput" class="form-label fw-bold">Scan or Enter Barcode:</label>
-                <input type="text" id="barcodeInput" class="form-control" placeholder="Scan barcode here..." autofocus>
-            </div>
-
-            <!-- Cart Table -->
-            <table class="table table-bordered" id="cartTable">
-                <thead class="table-light">
-                    <tr>
-                        <th>Product</th>
-                        <th>Qty</th>
-                        <th>Price</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-
-            <!-- Totals -->
-            <div class="text-end fw-bold">
-                <p>Subtotal: $<span id="subtotal">0.00</span></p>
-                <p>Tax: $<span id="tax">0.00</span></p>
-                <p class="fs-5">Total: $<span id="total">0.00</span></p>
-            </div>
-
-            <!-- Payment Buttons -->
-            <div class="mt-3 text-center">
-                <button id="cashBtn" class="btn btn-success m-1 w-25">Cash</button>
-                <button id="mpesaBtn" class="btn btn-warning m-1 w-25">Mpesa</button>
-                <button id="balanceBtn" class="btn btn-info m-1 w-25">Balance</button>
-                <button id="printReceiptBtn" class="btn btn-secondary m-1 w-25">🖨️ Print Receipt</button>
+<div class="container-fluid p-3" style="background:#e6e6e6; min-height:100vh;">
+    <div class="bg-white p-3 shadow rounded" style="max-width:1100px; margin:auto;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h4 class="fw-bold mb-0">Supermarket</h4>
+            <div class="text-end">
+                <div class="small"><?= date('d/m/Y') ?></div>
+                <div class="small">Cashier: <?= Yii::$app->user->isGuest ? 'Guest' : Yii::$app->user->identity->id ?></div>
             </div>
         </div>
 
-        <!-- Receipt Preview -->
-        <div class="col-md-6">
-            <div class="card shadow-sm p-3">
-                <h5 class="text-secondary">🧾 Receipt Preview</h5>
-                <div id="receiptBox" class="bg-white p-3 rounded border" style="min-height:300px; font-family:monospace; white-space:pre-wrap;"></div>
+        <table class="table table-sm table-bordered" id="cartTable">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:40%">Item Name</th>
+                    <th style="width:10%">Qty</th>
+                    <th style="width:20%">Unit Price</th>
+                    <th style="width:20%">Total Price</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div class="d-flex justify-content-between">
+            <div style="width:50%">
+                <input type="text" id="barcodeInput" class="form-control form-control-sm mb-2" placeholder="Scan barcode..." autofocus>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary btn-sm" id="newSaleBtn">New Sale</button>
+                    <button class="btn btn-secondary btn-sm" id="voidBtn">Void Item</button>
+                    <button class="btn btn-secondary btn-sm" id="printReceiptBtn">Print Receipt</button>
+                </div>
+            </div>
+
+            <div class="text-end" style="width:40%">
+                <div class="fw-bold">Subtotal <span class="ms-3">Ksh<span id="subtotal">0.00</span></span></div>
+                <div class="fw-bold">Tax <span class="ms-5">Ksh<span id="tax">0.00</span></span></div>
+                <div class="fw-bold fs-5">Total <span class="ms-4">Ksh<span id="total">0.00</span></span></div>
             </div>
         </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-3">
+            <button class="btn btn-success px-4" id="cashBtn">Cash</button>
+            <button class="btn btn-success px-4" id="creditBtn">Credit</button>
+            <button class="btn btn-success px-4" id="mpesaBtn">Mpesa</button>
+        </div>
+
+        <div class="mt-3">
+            <h6>Receipt Preview</h6>
+            <div id="receiptBox" class="border p-2 bg-light" style="font-family:monospace; white-space:pre-wrap; min-height:200px"></div>
+        </div>
+        <audio id="scanBeep" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
     </div>
-
-    <audio id="scanBeep" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 </div>
 
 <?php
 $addUrl = \yii\helpers\Url::to(['pos/add']);
 $checkoutUrl = \yii\helpers\Url::to(['pos/checkout']);
+$clearUrl = \yii\helpers\Url::to(['pos/clear']);
 $js = <<<JS
 const barcodeInput = document.getElementById('barcodeInput');
 const cartTableBody = document.querySelector('#cartTable tbody');
@@ -66,7 +71,7 @@ const taxEl = document.getElementById('tax');
 const totalEl = document.getElementById('total');
 const receiptBox = document.getElementById('receiptBox');
 
-let lastReceipt = ''; // store last generated receipt
+let lastReceipt = '';
 
 function renderCart(cart) {
     cartTableBody.innerHTML = '';
@@ -78,12 +83,10 @@ function renderCart(cart) {
         tr.innerHTML = `
             <td>\${item.name}</td>
             <td>\${item.qty}</td>
-            <td>$\${item.unit_price.toFixed(2)}</td>
-            <td>$\${item.total.toFixed(2)}</td>
+            <td>Ksh\${item.unit_price.toFixed(2)}</td>
+            <td>Ksh\${item.total.toFixed(2)}</td>
         `;
         cartTableBody.appendChild(tr);
-        tr.classList.add('table-info');
-        setTimeout(() => tr.classList.remove('table-info'), 300);
         subtotal += item.total;
         tax += (item.tax_rate / 100) * item.total;
     });
@@ -94,8 +97,7 @@ function renderCart(cart) {
     document.getElementById('scanBeep').play();
 }
 
-// --- Handle barcode scanning ---
-barcodeInput.addEventListener('keypress', function(e) {
+barcodeInput.addEventListener('keypress', e => {
     if (e.key === 'Enter') {
         const sku = barcodeInput.value.trim();
         if (!sku) return;
@@ -114,83 +116,87 @@ barcodeInput.addEventListener('keypress', function(e) {
     }
 });
 
-// --- Checkout function ---
-function processCheckout(paymentMethod) {
+function processCheckout(method) {
     fetch('$checkoutUrl', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({ payment_method: paymentMethod })
+        body: new URLSearchParams({ payment_method: method })
     })
     .then(r => r.json())
     .then(data => {
-        if (data.success) {
-            let now = new Date();
-            let receipt = '';
-            receipt += `        SUPERMARKET POS RECEIPT\\n`;
-            receipt += `--------------------------------------\\n`;
-            receipt += `Date: \${now.toLocaleString()}\\n`;
-            receipt += `Sale ID: \${data.sale_id}\\n`;
-            receipt += `Payment: \${paymentMethod}\\n`;
-            receipt += `--------------------------------------\\n`;
-            receipt += `Item                Qty   Price   Total\\n`;
-            receipt += `--------------------------------------\\n`;
+        if (!data.success) return alert(data.message);
 
-            const rows = document.querySelectorAll('#cartTable tbody tr');
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('td');
-                const name = cols[0].innerText.padEnd(18, ' ');
-                const qty = cols[1].innerText.padStart(3, ' ');
-                const price = cols[2].innerText.padStart(7, ' ');
-                const total = cols[3].innerText.padStart(7, ' ');
-                receipt += `\${name}\${qty}\${price}\${total}\\n`;
-            });
+        let now = new Date();
+        let r = `SUPERMARKET RECEIPT\n`;
+        r += `------------------------------------------\n`;
+        r += `Date: \${now.toLocaleString()}\n`;
+        r += `Sale ID: \${data.sale_id}\n`;
+        r += `Payment: \${method}\n`;
+        r += `------------------------------------------\n`;
+        r += `Item                          Qty    Total\n`;
+        r += `------------------------------------------\n`;
 
-            receipt += `--------------------------------------\\n`;
-            receipt += `Subtotal: $\${subtotalEl.textContent}\\n`;
-            receipt += `Tax: $\${taxEl.textContent}\\n`;
-            receipt += `TOTAL: $\${totalEl.textContent}\\n`;
-            receipt += `--------------------------------------\\n`;
-            receipt += `Thank you for shopping with us!\\n`;
+        document.querySelectorAll('#cartTable tbody tr').forEach(row => {
+            const c = row.children;
 
-            lastReceipt = receipt;
-            receiptBox.textContent = receipt;
-            renderCart([]);
-        } else {
-            alert('Checkout failed: ' + data.message);
-        }
-    })
-    .catch(err => console.error('Checkout error:', err));
+            let name  = c[0].innerText;
+            let qty   = c[1].innerText;
+            let total = c[3].innerText;
+
+            // Fixed-width, aligned formatting
+            let line =
+                name.padEnd(28).substring(0, 28) + " " +
+                qty.toString().padStart(3) + "   " +
+                total.toString().padStart(7);
+
+            r += line + '\\n';
+        });
+
+        r += `------------------------------------------\n`;
+        r += `Subtotal: $\${subtotalEl.textContent}\n`;
+        r += `Tax:      $\${taxEl.textContent}\n`;
+        r += `TOTAL:    $\${totalEl.textContent}\n`;
+
+        lastReceipt = r;
+        receiptBox.textContent = r;
+        renderCart([]);
+    });
 }
 
-// --- Payment buttons ---
-document.getElementById('cashBtn').addEventListener('click', () => processCheckout('Cash'));
-document.getElementById('mpesaBtn').addEventListener('click', () => processCheckout('Mpesa'));
 
-// --- Balance button (calculate cash balance) ---
-document.getElementById('balanceBtn').addEventListener('click', () => {
-    const total = parseFloat(totalEl.textContent);
-    if (total <= 0) return alert('Cart is empty.');
-    const given = parseFloat(prompt('Enter cash received:', total));
-    if (isNaN(given) || given < total) {
-        alert('Invalid or insufficient amount received.');
+document.getElementById('cashBtn').onclick = () => processCheckout('Cash');
+document.getElementById('creditBtn').onclick = () => processCheckout('Credit');
+document.getElementById('mpesaBtn').onclick = () => processCheckout('Mpesa');
+
+document.getElementById('newSaleBtn').onclick = () => fetch('$clearUrl', {method:'POST'}).then(()=>{renderCart([]); receiptBox.textContent='';});
+document.getElementById('voidBtn').onclick = () => alert('Click qty update to remove an item or set qty to 0');
+
+document.getElementById('printReceiptBtn').addEventListener('click', () => {
+    if (!lastReceipt) {
+        alert('No receipt to print!');
         return;
     }
-    const balance = (given - total).toFixed(2);
-    alert(` Balance to return: $\${balance}`);
+
+    qz.websocket.connect().then(() => {
+        return qz.printers.find("XP-80C");
+    }).then(printer => {
+        let config = qz.configs.create(printer);
+
+        let data = [{
+            type: 'raw',
+            format: 'plain',
+            data: lastReceipt
+        }];
+
+        return qz.print(config, data);
+    }).then(() => {
+        console.log("Receipt printed successfully");
+    }).catch(err => {
+        console.error("Print Error:", err);
+        alert("Printer not found or QZ Tray not running.");
+    });
 });
 
-// --- Print Receipt button ---
-document.getElementById('printReceiptBtn').addEventListener('click', () => {
-    if (!lastReceipt) return alert('No receipt to print!');
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    printWindow.document.write(`<pre>\${lastReceipt}</pre>`);
-    printWindow.print();
-    printWindow.close();
-
-
-    
-});
 JS;
-
 $this->registerJs($js);
 ?>
