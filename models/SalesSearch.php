@@ -18,8 +18,8 @@ class SalesSearch extends Sales
     {
         return [
             [['id'], 'integer'],
-            [['client_name', 'status', 'payment_method', 'created_at'], 'safe'],
-            [['total_amount'], 'number'],
+            [['client_name','client_phone', 'status', 'payment_method', 'created_at'], 'safe'],
+            [['total_amount','amount_paid'], 'number'],
         ];
     }
 
@@ -62,10 +62,12 @@ class SalesSearch extends Sales
         $query->andFilterWhere([
             'id' => $this->id,
             'total_amount' => $this->total_amount,
+            'amount_paid' => $this->amount_paid,
             'created_at' => $this->created_at,
         ]);
 
         $query->andFilterWhere(['like', 'client_name', $this->client_name])
+            ->andFilterWhere(['like', 'client_phone', $this->client_phone])
             ->andFilterWhere(['like', 'status', $this->status])
             ->andFilterWhere(['like', 'payment_method', $this->payment_method]);
 

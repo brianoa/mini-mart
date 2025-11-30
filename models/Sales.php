@@ -9,9 +9,11 @@ use Yii;
  *
  * @property int $id
  * @property string $client_name
+ * @property string|null $client_phone
  * @property string|null $status
  * @property string|null $payment_method
  * @property float $total_amount
+ * @property float $amount_paid
  * @property string|null $created_at
  *
  * @property SaleItems[] $saleItems
@@ -46,11 +48,12 @@ class Sales extends \yii\db\ActiveRecord
         return [
             [['status'], 'default', 'value' => 'PAID'],
             [['payment_method'], 'default', 'value' => 'CASH'],
-            [['client_name', 'total_amount'], 'required'],
+            [['client_name', 'total_amount','amount_paid'], 'required'],
             [['status', 'payment_method'], 'string'],
-            [['total_amount'], 'number'],
+            [['total_amount','amount_paid'], 'number'],
             [['created_at'], 'safe'],
             [['client_name'], 'string', 'max' => 255],
+            [['client_phone'], 'string', 'max' => 20],
             ['status', 'in', 'range' => array_keys(self::optsStatus())],
             ['payment_method', 'in', 'range' => array_keys(self::optsPaymentMethod())],
         ];
@@ -64,9 +67,11 @@ class Sales extends \yii\db\ActiveRecord
         return [
             'id' => 'ID',
             'client_name' => 'Client Name',
+            'client_phone' => 'Client Phone',
             'status' => 'Status',
             'payment_method' => 'Payment Method',
             'total_amount' => 'Total Amount',
+            'amount_paid'  => 'Amount Paid',
             'created_at' => 'Created At',
         ];
     }
@@ -215,4 +220,5 @@ class Sales extends \yii\db\ActiveRecord
     {
         $this->payment_method = self::PAYMENT_METHOD_OTHER;
     }
+    
 }

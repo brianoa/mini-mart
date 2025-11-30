@@ -212,9 +212,11 @@ class PosController extends Controller
         // Save sale
         $sale = new Sales();
         $sale->client_name = Yii::$app->request->post('client_name', 'Walking Customer');
+        $sale->client_phone = Yii::$app->request->post('client_phone');
         $sale->payment_method = Yii::$app->request->post('payment_method', Sales::PAYMENT_METHOD_CASH);
         $sale->status = Sales::STATUS_PAID;
         $sale->total_amount = $total_amount;
+        $sale->amount_paid = Yii::$app->request->post('amount_paid', $total_amount);
 
         if (!$sale->save()) {
             return ['success' => false, 'message' => 'Failed to save sale', 'errors' => $sale->errors];

@@ -9,6 +9,8 @@ use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
+use app\models\Sales;
+use app\models\SaleItems;
 
 class SiteController extends Controller
 {
@@ -125,4 +127,43 @@ class SiteController extends Controller
     {
         return $this->render('about');
     }
+
+
+    public function actionClientPurchases()
+    {
+        $client = Yii::$app->request->get('client');
+
+        $query = Sales::find();
+
+        if ($client) {
+            $query->andWhere(['like', 'client_name', $client]);
+        }
+
+        $sales = $query->orderBy(['created_at' => SORT_DESC])->all();
+
+        return $this->render('client-purchases', [
+            'sales' => $sales,
+            'client' => $client
+        ]);
+    }
+
+    public function actionViewClientPurchase($id)
+    {
+        $sale = Sales::findOne($id);
+
+        if (!$sale) {
+            throw new \yii\web\NotFoundHttpException('Sale not found.');
+        }
+
+        $items = SaleItems::find()
+            ->where(['sale_id' => $id])
+            ->all();
+
+        return $this->render('view-client-purchase', [
+            'sale' => $sale,
+            'items' => $items
+        ]);
+    }
+
+
 }
