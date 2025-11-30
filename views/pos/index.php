@@ -71,8 +71,10 @@ $this->title = 'Supermarket POS';
 
     <input type="number" id="amount_paid" placeholder="Amount paid" style="width:100%; padding:8px; margin-bottom:15px">
 
-    <button onclick="processPayment()" style="padding:8px 15px;">Confirm</button>
-    <button onclick="closeModal()" style="padding:8px 15px;background:#aaa">Cancel</button>
+    <button type="button" id="confirmBtn" style="padding:8px 15px;">Confirm</button>
+<button type="button" id="cancelBtn" style="padding:8px 15px;background:#aaa">Cancel</button>
+
+
 
     <div id="loader" style="display:none; margin-top:15px;">
         Processing...
@@ -177,6 +179,8 @@ function processPayment() {
         document.getElementById('loader').style.display = 'none';
         if (!data.success) return alert(data.message);
 
+
+
         document.getElementById('successTick').style.display = 'block';
 
         setTimeout(() => {
@@ -274,6 +278,11 @@ document.getElementById('mpesaBtn').onclick  = () => processCheckout('Mpesa');
 
 document.getElementById('newSaleBtn').onclick = () => fetch('$clearUrl', {method:'POST'}).then(()=>{renderCart([]); receiptBox.textContent='';});
 document.getElementById('voidBtn').onclick = () => alert('Click qty update to remove an item or set qty to 0');
+
+
+// Fix modal buttons
+document.getElementById('confirmBtn').onclick = processPayment;
+document.getElementById('cancelBtn').onclick = closeModal;
 
 document.getElementById('printReceiptBtn').addEventListener('click', () => {
     if (!lastReceipt) {
