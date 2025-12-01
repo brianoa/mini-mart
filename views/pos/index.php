@@ -42,6 +42,8 @@ $this->title = 'Supermarket POS';
                 <div class="fw-bold">Subtotal <span class="ms-3">Ksh<span id="subtotal">0.00</span></span></div>
                 <div class="fw-bold">Tax <span class="ms-5">Ksh<span id="tax">0.00</span></span></div>
                 <div class="fw-bold fs-5">Total <span class="ms-4">Ksh<span id="total">0.00</span></span></div>
+                <!-- Added Balance display -->
+                <div class="fw-bold fs-5 text-dark">Balance <span class="ms-4">Ksh<span id="balance">0.00</span></span></div>
             </div>
         </div>
 
@@ -61,20 +63,15 @@ $this->title = 'Supermarket POS';
 
 <!-- PAYMENT MODAL -->
 <div id="cashModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9999;">
-  <div style="background:#fff; padding:20px; max-width:400px; margin:100px auto; border-radius:6px; text-align:center">
-
+ <div style="background:#fff; padding:20px; max-width:400px; margin:100px auto; border-radius:6px; text-align:center">
     <h3>Cash Payment</h3>
 
     <input type="text" id="client_name" placeholder="Client name" style="width:100%; padding:8px; margin-bottom:10px">
-
     <input type="text" id="client_phone" placeholder="Phone (optional)" style="width:100%; padding:8px; margin-bottom:10px">
-
     <input type="number" id="amount_paid" placeholder="Amount paid" style="width:100%; padding:8px; margin-bottom:15px">
 
     <button type="button" id="confirmBtn" style="padding:8px 15px;">Confirm</button>
-<button type="button" id="cancelBtn" style="padding:8px 15px;background:#aaa">Cancel</button>
-
-
+    <button type="button" id="cancelBtn" style="padding:8px 15px;background:#aaa">Cancel</button>
 
     <div id="loader" style="display:none; margin-top:15px;">
         Processing...
@@ -84,7 +81,7 @@ $this->title = 'Supermarket POS';
         ✔
     </div>
 
-  </div>
+ </div>
 </div>
 
 <?php
@@ -97,9 +94,11 @@ const cartTableBody = document.querySelector('#cartTable tbody');
 const subtotalEl = document.getElementById('subtotal');
 const taxEl = document.getElementById('tax');
 const totalEl = document.getElementById('total');
+const balanceEl = document.getElementById('balance'); // Added balance element
 const receiptBox = document.getElementById('receiptBox');
 
 let lastReceipt = '';
+let currentAmountPaid = 0; // Track amount paid for balance calculation
 
 function openModal(){
     document.getElementById('cashModal').style.display = 'block';
@@ -107,6 +106,12 @@ function openModal(){
 
 function closeModal(){
     document.getElementById('cashModal').style.display = 'none';
+}
+
+function updateBalance() {
+    const total = parseFloat(totalEl.textContent) || 0;
+    const balance = currentAmountPaid - total;
+    balanceEl.textContent = Math.max(0, balance).toFixed(2);
 }
 
 function renderCart(cart) {
@@ -130,6 +135,7 @@ function renderCart(cart) {
     subtotalEl.textContent = subtotal.toFixed(2);
     taxEl.textContent = tax.toFixed(2);
     totalEl.textContent = (subtotal + tax).toFixed(2);
+    updateBalance(); // Update balance when cart changes
     document.getElementById('scanBeep').play();
 }
 
@@ -155,7 +161,7 @@ barcodeInput.addEventListener('keypress', e => {
 function processPayment() {
     const client_name  = document.getElementById('client_name').value;
     const client_phone = document.getElementById('client_phone').value;
-    const amount_paid  = document.getElementById('amount_paid').value;
+    const amount_paid  = parseFloat(document.getElementById('amount_paid').value) || 0;
 
     if(!client_name || !amount_paid){
         alert('Client name and amount paid required');
@@ -179,8 +185,6 @@ function processPayment() {
         document.getElementById('loader').style.display = 'none';
         if (!data.success) return alert(data.message);
 
-
-
         document.getElementById('successTick').style.display = 'block';
 
         setTimeout(() => {
@@ -195,7 +199,7 @@ function processPayment() {
             r += `Payment: CASH\n`;
             r += `Client: \${client_name}\n`;
             r += `------------------------------------------\n`;
-            r += `Item                          Qty    Total\n`;
+            r += `Item                    Qty    Total\n`;
             r += `------------------------------------------\n`;
 
             document.querySelectorAll('#cartTable tbody tr').forEach(row => {
@@ -216,12 +220,13 @@ function processPayment() {
             r += `Subtotal: Ksh\${subtotalEl.textContent}\n`;
             r += `Tax:      Ksh\${taxEl.textContent}\n`;
             r += `TOTAL:    Ksh\${totalEl.textContent}\n`;
-            r += `Paid:     Ksh\${amount_paid}\n`;
+            r += `Paid:     Ksh\${amount_paid.toFixed(2)}\n`;
+            r += `BALANCE:  Ksh\${Math.max(0, amount_paid - parseFloat(totalEl.textContent)).toFixed(2)}\n`; // Added balance to receipt
 
             lastReceipt = r;
             receiptBox.textContent = r;
+            currentAmountPaid = 0; // Reset after successful payment
             renderCart([]);
-
         }, 800);
     });
 }
@@ -243,7 +248,7 @@ function processCheckout(method) {
         r += `Sale ID: \${data.sale_id}\n`;
         r += `Payment: \${method}\n`;
         r += `------------------------------------------\n`;
-        r += `Item                          Qty    Total\n`;
+        r += `Item                    Qty    Total\n`;
         r += `------------------------------------------\n`;
 
         document.querySelectorAll('#cartTable tbody tr').forEach(row => {
@@ -268,17 +273,23 @@ function processCheckout(method) {
 
         lastReceipt = r;
         receiptBox.textContent = r;
+        currentAmountPaid = 0; // Reset after payment
         renderCart([]);
     });
 }
+
+// Update balance when amount paid changes in modal (for cash payments)
+document.getElementById('amount_paid').addEventListener('input', function() {
+    currentAmountPaid = parseFloat(this.value) || 0;
+    updateBalance();
+});
 
 document.getElementById('cashBtn').onclick   = () => openModal();
 document.getElementById('creditBtn').onclick = () => processCheckout('Credit');
 document.getElementById('mpesaBtn').onclick  = () => processCheckout('Mpesa');
 
-document.getElementById('newSaleBtn').onclick = () => fetch('$clearUrl', {method:'POST'}).then(()=>{renderCart([]); receiptBox.textContent='';});
+document.getElementById('newSaleBtn').onclick = () => fetch('$clearUrl', {method:'POST'}).then(()=>{renderCart([]); receiptBox.textContent=''; currentAmountPaid = 0;});
 document.getElementById('voidBtn').onclick = () => alert('Click qty update to remove an item or set qty to 0');
-
 
 // Fix modal buttons
 document.getElementById('confirmBtn').onclick = processPayment;
