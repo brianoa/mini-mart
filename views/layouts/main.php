@@ -39,10 +39,10 @@ $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/x-icon', 'href' => Yii
     echo Nav::widget([
         'options' => ['class' => 'navbar-nav'],
         'items' => [
+            ['label' => 'Dashboard', 'url' => ['/site/dashboard']],
             ['label' => 'POS', 'url' => ['/pos']],
             ['label' => 'Products', 'url' => ['/products']],
             ['label' => 'Sales', 'url' => ['/sales']],
-            ['label' => 'SaleItems', 'url' => ['/sale-items']],
             ['label' => 'Purchases', 'url' => ['/site/client-purchases']],
             Yii::$app->user->isGuest
                 ? ['label' => 'Login', 'url' => ['/site/login']]
