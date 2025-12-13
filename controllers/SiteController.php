@@ -11,6 +11,8 @@ use app\models\LoginForm;
 use app\models\ContactForm;
 use app\models\Sales;
 use app\models\SaleItems;
+use yii\db\Query;
+
 
 class SiteController extends Controller
 {
@@ -27,7 +29,7 @@ class SiteController extends Controller
                     [
                         'actions' => ['logout'],
                         'allow' => true,
-                        'roles' => ['@'],
+                        'roles' => [''],
                     ],
                 ],
             ],
@@ -165,5 +167,133 @@ class SiteController extends Controller
         ]);
     }
 
+    public function actionDashboard()
+{
+   
+    $db = \Yii::$app->db;
+
+    $today = date('Y-m-d');
+    $startOfWeek = date('Y-m-d', strtotime('monday this week'));
+    $startOfMonth = date('Y-m-01');
+
+    $firstDayLastMonth = date('Y-m-01', strtotime('first day of last month'));
+    $lastDayLastMonth  = date('Y-m-t', strtotime('last day of last month'));
+
+    // REVENUE (only PAID sales)
+    $todayIncome = (float)$db->createCommand("
+        SELECT SUM(total_amount) 
+        FROM sales 
+        WHERE status = 'PAID' AND DATE(created_at) = :today
+    ")->bindValue(':today', $today)->queryScalar();
+
+    $yesterday = date('Y-m-d', strtotime('-1 day'));
+
+    $yesterdayIncome = (float)$db->createCommand("
+        SELECT SUM(total_amount) 
+        FROM sales 
+        WHERE status = 'PAID' AND DATE(created_at) = :yesterday
+    ")->bindValue(':yesterday', $yesterday)->queryScalar();
+
+    $weeklyIncome = (float)$db->createCommand("
+        SELECT SUM(total_amount) 
+        FROM sales 
+        WHERE status = 'PAID' AND DATE(created_at) >= :start
+    ")->bindValue(':start', $startOfWeek)->queryScalar();
+
+    $monthlyIncome = (float)$db->createCommand("
+        SELECT SUM(total_amount) 
+        FROM sales 
+        WHERE status = 'PAID' AND DATE(created_at) >= :start
+    ")->bindValue(':start', $startOfMonth)->queryScalar();
+
+    $lastMonthRevenue = (float)$db->createCommand("
+        SELECT SUM(total_amount) 
+        FROM sales 
+        WHERE status = 'PAID'
+          AND DATE(created_at) BETWEEN :start AND :end
+    ")->bindValues([
+        ':start' => $firstDayLastMonth,
+        ':end'   => $lastDayLastMonth,
+    ])->queryScalar();
+
+    $totalRevenue = (float)$db->createCommand("
+        SELECT SUM(total_amount) 
+        FROM sales 
+        WHERE status = 'PAID'
+    ")->queryScalar();
+
+    // EXPENSES
+    $monthlyExpenses = (float)$db->createCommand("
+        SELECT SUM(amount) 
+        FROM expenses 
+        WHERE DATE(created_at) >= :start
+    ")->bindValue(':start', $startOfMonth)->queryScalar();
+
+    $lastMonthExpenses = (float)$db->createCommand("
+        SELECT SUM(amount) 
+        FROM expenses 
+        WHERE DATE(created_at) BETWEEN :start AND :end
+    ")->bindValues([
+        ':start' => $firstDayLastMonth,
+        ':end'   => $lastDayLastMonth,
+    ])->queryScalar();
+
+    $totalExpenses = (float)$db->createCommand("
+        SELECT SUM(amount) 
+        FROM expenses
+    ")->queryScalar();
+
+    // STOCK VALUES (from products)
+    $totalStockValue = (float)$db->createCommand("
+        SELECT SUM(buying_price * balance_qty_instock) 
+        FROM products
+    ")->queryScalar();
+
+    $totalSalesValue = (float)$db->createCommand("
+        SELECT SUM(selling_price * sold_qty_instock) 
+        FROM products
+    ")->queryScalar();
+
+    // NETS
+    $netProfit = $totalSalesValue - $totalStockValue;          // stock vs sales approximation
+    $netIncome = $totalRevenue - $totalExpenses;               // revenue - expenses
+
+    $monthlyNetIncome    = $monthlyIncome - $monthlyExpenses;
+    $lastMonthNetIncome  = $lastMonthRevenue - $lastMonthExpenses;
+
+    // LOW STOCK COUNT (threshold = 10)
+    $lowStockCount = (int)(new Query())
+        ->from('products')
+        ->where(['<', 'balance_qty_instock', 10])
+        ->count('*', $db);
+
+    // BEST SELLING ITEMS (top 5 by sold_qty_instock)
+    $bestSellingItems = (new Query())
+        ->select(['name', 'sold_qty_instock AS total_sold'])
+        ->from('products')
+        ->orderBy(['sold_qty_instock' => SORT_DESC])
+        ->limit(5)
+        ->all($db);
+
+    return $this->render('dashboard', [
+        'todayIncome'        => $todayIncome ?: 0,
+        'yesterdayIncome'    => $yesterdayIncome ?: 0,
+        'weeklyIncome'       => $weeklyIncome ?: 0,
+        'monthlyIncome'      => $monthlyIncome ?: 0,
+        'lastMonthRevenue'   => $lastMonthRevenue ?: 0,
+        'monthlyExpenses'    => $monthlyExpenses ?: 0,
+        'lastMonthExpenses'  => $lastMonthExpenses ?: 0,
+        'monthlyNetIncome'   => $monthlyNetIncome ?: 0,
+        'lastMonthNetIncome' => $lastMonthNetIncome ?: 0,
+        'totalRevenue'       => $totalRevenue ?: 0,
+        'totalExpenses'      => $totalExpenses ?: 0,
+        'totalStockValue'    => $totalStockValue ?: 0,
+        'totalSalesValue'    => $totalSalesValue ?: 0,
+        'netProfit'          => $netProfit ?: 0,
+        'netIncome'          => $netIncome ?: 0,
+        'bestSellingItems'   => $bestSellingItems,
+        'lowStockCount'      => $lowStockCount,
+    ]);
+}
 
 }
