@@ -8,6 +8,8 @@ use yii\filters\VerbFilter;
 use app\models\Products;
 use app\models\Sales;
 use app\models\SaleItems;
+use app\components\MpesaService;
+
 
 class PosController extends Controller
 {
@@ -325,6 +327,68 @@ class PosController extends Controller
             'success'      => true,
             'sale_id'      => $sale->id,
             'total_amount' => $total_amount,
+        ];
+    }
+
+    /** Mpesa STK init: used by Mpesa Confirm button */
+    public function actionMpesaInit()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $phoneRaw = Yii::$app->request->post('phone');
+        if (!$phoneRaw) {
+            return ['success' => false, 'message' => 'Phone number required'];
+        }
+
+        // Normalize Kenyan phone to 2547XXXXXXXX
+        $phone = preg_replace('/\D+/', '', $phoneRaw);
+        if (preg_match('/^07\d{8}$/', $phone)) {
+            $phone = '254' . substr($phone, 1);
+        } elseif (preg_match('/^\+2547\d{8}$/', $phone)) {
+            $phone = substr($phone, 1);
+        }
+        if (!preg_match('/^2547\d{8}$/', $phone)) {
+            return ['success' => false, 'message' => 'Invalid Kenyan phone (use 07.. or 2547..).'];
+        }
+
+        $session = Yii::$app->session;
+        $cart    = $session->get('cart', []);
+        if (empty($cart)) {
+            return ['success' => false, 'message' => 'Cart is empty'];
+        }
+
+        // Calculate total from cart
+        $subtotal = 0;
+        $tax      = 0;
+        foreach ($cart as $item) {
+            $subtotal += $item['total'];
+            $tax      += ($item['total'] * ($item['tax_rate'] ?? 0) / 100);
+        }
+        $total_amount = round($subtotal + $tax, 2);
+        if ($total_amount <= 0) {
+            return ['success' => false, 'message' => 'Total amount must be greater than zero'];
+        }
+
+        // Simple account reference for now (you can later use sale id)
+        $accountRef = 'POS-' . time();
+
+        try {
+            $mpesa  = new MpesaService();
+            $result = $mpesa->stkPush($phone, $total_amount, $accountRef, 'POS Sale');
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+
+        if (!isset($result['ResponseCode']) || $result['ResponseCode'] !== '0') {
+            $msg = $result['CustomerMessage'] ?? $result['ResponseDescription'] ?? 'STK request failed';
+            return ['success' => false, 'message' => $msg, 'raw' => $result];
+        }
+
+        return [
+            'success'      => true,
+            'message'      => $result['CustomerMessage'] ?? 'STK sent. Ask customer to check phone.',
+            'total_amount' => $total_amount,
+            'response'     => $result,
         ];
     }
 }

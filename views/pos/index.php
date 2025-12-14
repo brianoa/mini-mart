@@ -4,9 +4,10 @@ $this->title = 'Supermarket POS';
 
 use yii\helpers\Url;
 
-$addUrl      = Url::to(['pos/add']);
-$checkoutUrl = Url::to(['pos/checkout']);
-$clearUrl    = Url::to(['pos/clear']);
+$addUrl       = Url::to(['pos/add']);
+$checkoutUrl  = Url::to(['pos/checkout']);
+$clearUrl     = Url::to(['pos/clear']);
+$mpesaInitUrl = Url::to(['pos/mpesa-init']);
 ?>
 
 <script src="/js/qz-tray.js"></script>
@@ -90,8 +91,6 @@ $clearUrl    = Url::to(['pos/clear']);
 
         <input type="text" id="client_name" placeholder="Client name"
                style="width:100%; padding:8px; margin-bottom:10px">
-        <input type="text" id="client_phone" placeholder="Phone (optional)"
-               style="width:100%; padding:8px; margin-bottom:10px">
         <input type="number" id="amount_paid" placeholder="Amount paid"
                style="width:100%; padding:8px; margin-bottom:15px">
 
@@ -131,6 +130,11 @@ $clearUrl    = Url::to(['pos/clear']);
 <?php
 $js = <<<JS
 console.log('POS JS loaded');
+
+const addUrl       = '$addUrl';
+const checkoutUrl  = '$checkoutUrl';
+const clearUrl     = '$clearUrl';
+const mpesaInitUrl = '$mpesaInitUrl';
 
 const barcodeInput  = document.getElementById('barcodeInput');
 const cartTableBody = document.querySelector('#cartTable tbody');
@@ -201,7 +205,7 @@ barcodeInput.addEventListener('keypress', async (e) => {
     if (!sku) return;
 
     try {
-        const response = await fetch('$addUrl', {
+        const response = await fetch(addUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ sku: sku })
@@ -228,10 +232,9 @@ barcodeInput.addEventListener('keypress', async (e) => {
 
 // CASH PAYMENT
 function processPayment() {
-    const client_name  = document.getElementById('client_name').value.trim();
-    const client_phone = document.getElementById('client_phone').value.trim();
-    const amount_paid  = parseFloat(document.getElementById('amount_paid').value) || 0;
-    const total        = parseFloat(totalEl.textContent) || 0;
+    const client_name = document.getElementById('client_name').value.trim();
+    const amount_paid = parseFloat(document.getElementById('amount_paid').value) || 0;
+    const total       = parseFloat(totalEl.textContent) || 0;
 
     if (!client_name) {
         alert('Client name required');
@@ -249,13 +252,12 @@ function processPayment() {
 
     document.getElementById('loader').style.display = 'block';
 
-    fetch('$checkoutUrl', {
+    fetch(checkoutUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
             payment_method: 'CASH',
             client_name:    client_name,
-            client_phone:   client_phone,
             amount_paid:    amount_paid
         })
     })
@@ -286,7 +288,7 @@ function processPayment() {
             r += 'Payment: CASH\\n';
             r += 'Client: ' + client_name + '\\n';
             r += '------------------------------------------\\n';
-            r += 'Item                    Qty    Total\\n';
+            r += 'Item                     Qty    Total\\n';
             r += '------------------------------------------\\n';
 
             document.querySelectorAll('#cartTable tbody tr').forEach(row => {
@@ -311,14 +313,12 @@ function processPayment() {
             r += 'BALANCE:  Ksh' +
                  Math.max(0, amount_paid - parseFloat(totalEl.textContent)).toFixed(2) + '\\n';
 
-            lastReceipt           = r;
+            lastReceipt            = r;
             receiptBox.textContent = r;
-            currentAmountPaid     = 0;
+            currentAmountPaid      = 0;
 
-            // clear modal fields
-            document.getElementById('client_name').value  = '';
-            document.getElementById('client_phone').value = '';
-            document.getElementById('amount_paid').value  = '';
+            document.getElementById('client_name').value = '';
+            document.getElementById('amount_paid').value = '';
 
             renderCart([]);
         }, 800);
@@ -330,7 +330,7 @@ function processPayment() {
     });
 }
 
-// MPESA PAYMENT
+// MPESA PAYMENT – now calls mpesa-init for STK
 function processMpesaPayment() {
     const phone = document.getElementById('mpesa_phone').value.trim();
     if (!phone) {
@@ -340,20 +340,17 @@ function processMpesaPayment() {
 
     document.getElementById('mpesaLoader').style.display = 'block';
 
-    fetch('$checkoutUrl', {
+    fetch(mpesaInitUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            payment_method: 'Mpesa',
-            client_phone:   phone
-        })
+        body: new URLSearchParams({ phone: phone })
     })
     .then(r => r.json())
     .then(data => {
         document.getElementById('mpesaLoader').style.display = 'none';
 
         if (!data.success) {
-            let msg = data.message || 'Mpesa checkout failed';
+            let msg = data.message || 'Mpesa STK init failed';
             if (data.errors && Array.isArray(data.errors)) {
                 msg += '\\n' + data.errors.join('\\n');
             }
@@ -361,43 +358,10 @@ function processMpesaPayment() {
             return;
         }
 
+        alert(data.message || 'STK push sent. Ask customer to check phone.');
+
         closeMpesaModal();
         document.getElementById('mpesa_phone').value = '';
-
-        let now = new Date();
-        let r = 'SUPERMARKET RECEIPT\\n';
-        r += '------------------------------------------\\n';
-        r += 'Date: '   + now.toLocaleString() + '\\n';
-        r += 'Sale ID: ' + data.sale_id + '\\n';
-        r += 'Payment: Mpesa\\n';
-        r += 'Phone: '   + phone + '\\n';
-        r += '------------------------------------------\\n';
-        r += 'Item                    Qty    Total\\n';
-        r += '------------------------------------------\\n';
-
-        document.querySelectorAll('#cartTable tbody tr').forEach(row => {
-            const c = row.children;
-            let name  = c[0].innerText;
-            let qty   = c[1].innerText;
-            let total = c[3].innerText;
-
-            let line =
-                name.padEnd(28).substring(0, 28) + ' ' +
-                qty.toString().padStart(3) + '   ' +
-                total.toString().padStart(7);
-
-            r += line + '\\n';
-        });
-
-        r += '------------------------------------------\\n';
-        r += 'Subtotal: Ksh' + currentSubtotal.toFixed(2) + '\\n';
-        r += 'Tax:      Ksh' + taxEl.textContent + '\\n';
-        r += 'TOTAL:    Ksh' + totalEl.textContent + '\\n';
-
-        lastReceipt           = r;
-        receiptBox.textContent = r;
-        currentAmountPaid     = 0;
-        renderCart([]);
     })
     .catch(err => {
         document.getElementById('mpesaLoader').style.display = 'none';
@@ -408,7 +372,7 @@ function processMpesaPayment() {
 
 // CREDIT / GENERIC CHECKOUT (no amount_paid)
 function processCheckout(method) {
-    fetch('$checkoutUrl', {
+    fetch(checkoutUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ payment_method: method })
@@ -431,7 +395,7 @@ function processCheckout(method) {
         r += 'Sale ID: ' + data.sale_id + '\\n';
         r += 'Payment: ' + method + '\\n';
         r += '------------------------------------------\\n';
-        r += 'Item                    Qty    Total\\n';
+        r += 'Item                     Qty    Total\\n';
         r += '------------------------------------------\\n';
 
         document.querySelectorAll('#cartTable tbody tr').forEach(row => {
@@ -453,9 +417,9 @@ function processCheckout(method) {
         r += 'Tax:      Ksh' + taxEl.textContent + '\\n';
         r += 'TOTAL:    Ksh' + totalEl.textContent + '\\n';
 
-        lastReceipt           = r;
+        lastReceipt            = r;
         receiptBox.textContent = r;
-        currentAmountPaid     = 0;
+        currentAmountPaid      = 0;
         renderCart([]);
     })
     .catch(err => {
@@ -471,12 +435,12 @@ document.getElementById('amount_paid').addEventListener('input', function () {
 });
 
 // BUTTON HANDLERS
-document.getElementById('cashBtn').onclick   = () => openCashModal();
-document.getElementById('creditBtn').onclick = () => processCheckout('Credit');
-document.getElementById('mpesaBtn').onclick  = () => openMpesaModal();
+document.getElementById('cashBtn').onclick    = () => openCashModal();
+document.getElementById('creditBtn').onclick  = () => processCheckout('Credit');
+document.getElementById('mpesaBtn').onclick   = () => openMpesaModal();
 
 document.getElementById('newSaleBtn').onclick = () => {
-    fetch('$clearUrl', { method: 'POST' })
+    fetch(clearUrl, { method: 'POST' })
         .then(() => {
             renderCart([]);
             receiptBox.textContent = '';
